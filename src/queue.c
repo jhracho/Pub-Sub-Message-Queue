@@ -7,7 +7,9 @@
  * @return  Newly allocated queue structure.
  */
 Queue * queue_create() {
-    return NULL;
+    Queue *q = calloc(1, sizeof(Queue));
+    
+    return q;
 }
 
 /**
