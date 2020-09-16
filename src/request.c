@@ -13,19 +13,11 @@
  * @return  Newly allocated Request structure.
  */
 Request * request_create(const char *method, const char *uri, const char *body) {
-    //Request *r = calloc(1, sizeof(Request));
-    Request *r = malloc(sizeof(Request));
+    Request *r = calloc(1, sizeof(Request)); 
     if (r){
-        /*
-        r->method = malloc(sizeof(const char *));
-        r->uri = malloc(sizeof(char *));
-        r->body = malloc(sizeof(char *));
-        */
-
-        r->method = (char *)method; 
-        r->uri = (char *)uri;
-        r->body = (char *)body;
-        
+        r->method = strdup((char *)method); 
+        r->uri = strdup((char *)uri);
+        r->body = strdup((char *)body);  
     }
     return r;
 }
