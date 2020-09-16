@@ -24,7 +24,16 @@ void * mq_puller(void *);
  * @return  Newly allocated Message Queue structure.
  */
 MessageQueue * mq_create(const char *name, const char *host, const char *port) {
-    return NULL;
+    MessageQueue *mq = calloc(1, sizeof(MessageQueue));
+    if (mq) {
+        mq->name = name;
+        mq->host = host;
+        mq->port = port;
+        mq->outgoing = calloc(1, sizeof(Queue));
+        mq->incoming = calloc(1, sizeof(Queue));
+        mq->shutdown = false;
+    }
+    return mq;
 }
 
 /**
@@ -32,6 +41,8 @@ MessageQueue * mq_create(const char *name, const char *host, const char *port) {
  * @param   mq      Message Queue structure.
  */
 void mq_delete(MessageQueue *mq) {
+    if (mq) {
+    }
 }
 
 /**
@@ -41,6 +52,10 @@ void mq_delete(MessageQueue *mq) {
  * @param   body    Message body to publish.
  */
 void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
+    Request *r = request_create("PUT",topic,body);
+
+    mq->outgoing->tail = r;
+    request_delete(r);
 }
 
 /**
@@ -49,7 +64,11 @@ void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
  * @return  Newly allocated message body (must be freed).
  */
 char * mq_retrieve(MessageQueue *mq) {
-    return NULL;
+    Request *r = mq->incoming->head;
+    if (!mq){
+        
+    }
+    return r->body;
 }
 
 /**
@@ -58,6 +77,7 @@ char * mq_retrieve(MessageQueue *mq) {
  * @param   topic   Topic string to subscribe to.
  **/
 void mq_subscribe(MessageQueue *mq, const char *topic) {
+    mq->outgoing->uri = topic;
 }
 
 /**
@@ -66,6 +86,7 @@ void mq_subscribe(MessageQueue *mq, const char *topic) {
  * @param   topic   Topic string to unsubscribe from.
  **/
 void mq_unsubscribe(MessageQueue *mq, const char *topic) {
+
 }
 
 /**
