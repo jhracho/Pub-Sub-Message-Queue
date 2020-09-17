@@ -14,10 +14,10 @@ Queue * queue_create() {
         q->size = 0;
 
         mutex_init(&q->lock, NULL);
-        cond_init(&q->producer, NULL);
-        cond_init(&q->consumer, NULL);
+        cond_init(&q->block, NULL);
         return q;
     } 
+
     return NULL;
 }
 
@@ -26,6 +26,16 @@ Queue * queue_create() {
  * @param   q       Queue structure.
  */
 void queue_delete(Queue *q) {
+    mutex_lock(&q->lock);
+    Request *temp;
+
+    for (Request *r = q->head; r != NULL; r = temp){
+        temp = r->next;
+        request_delete(r);
+    }
+    
+    mutex_unlock(&q->lock);
+    free(q);
 }
 
 /**
@@ -34,6 +44,26 @@ void queue_delete(Queue *q) {
  * @param   r       Request structure.
  */
 void queue_push(Queue *q, Request *r) {
+    mutex_lock(&q->lock);
+    
+    // Check if youre pushing the first element
+    if (q->size == 0){
+        q->head = r;
+        q->tail = r;
+    }
+
+    // If its not the first element...
+    else{
+        q->tail->next = r;
+        q->tail = r;
+    }
+
+    // Standard for both cases
+    r->next = NULL;
+    q->size++;
+    
+    // Concurrency stuff
+    mutex_unlock(&q->lock);
 }
 
 /**
@@ -44,7 +74,20 @@ void queue_push(Queue *q, Request *r) {
 
 // POP CAN BLOCK... check if the queue is empty
 Request * queue_pop(Queue *q) {
-    return NULL;
+    // Block Pop :)
+    mutex_lock(&q->lock);
+    if (q->size == 0)
+        cond_wait(&q->block, &q->lock);
+
+    // Update Queue data
+    Request *pop = q->head;
+    q->head = q->head->next;
+    q->size--;
+
+    // Unlock the lock yo
+    
+    mutex_unlock(&q->lock);
+    return pop;
 }
 
 /* vim: set expandtab sts=4 sw=4 ts=8 ft=c: */

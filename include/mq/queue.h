@@ -16,8 +16,7 @@ struct Queue {
 
     /* TODO: Add any necessary thread and synchronization primitives */
     Mutex lock;
-    Cond producer;
-    Cond consumer;
+    Cond block;
 };
 
 /* Functions */
