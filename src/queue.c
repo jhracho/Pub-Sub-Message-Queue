@@ -9,9 +9,9 @@
 Queue * queue_create() {
     Queue *q = calloc(1, sizeof(Queue));
     if (q){
-        q->head = NULL;
-        q->tail = NULL;
-        q->size = 0;
+        //q->head = NULL;
+        //q->tail = NULL;
+        //q->size = 0;
 
         mutex_init(&q->lock, NULL);
         cond_init(&q->block, NULL);
