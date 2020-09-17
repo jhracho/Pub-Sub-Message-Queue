@@ -26,9 +26,9 @@ void * mq_puller(void *);
 MessageQueue * mq_create(const char *name, const char *host, const char *port) {
     MessageQueue *mq = calloc(1, sizeof(MessageQueue));
     if (mq) {
-        mq->name = name;
-        mq->host = host;
-        mq->port = port;
+        //mq->name = name;
+        //mq->host = host;
+        //mq->port = port;
         mq->outgoing = calloc(1, sizeof(Queue));
         mq->incoming = calloc(1, sizeof(Queue));
         mq->shutdown = false;
@@ -77,7 +77,7 @@ char * mq_retrieve(MessageQueue *mq) {
  * @param   topic   Topic string to subscribe to.
  **/
 void mq_subscribe(MessageQueue *mq, const char *topic) {
-    mq->outgoing->uri = topic;
+    //mq->outgoing->uri = topic;
 }
 
 /**
