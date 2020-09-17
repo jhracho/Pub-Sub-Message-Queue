@@ -15,6 +15,9 @@ struct Queue {
     size_t   size;
 
     /* TODO: Add any necessary thread and synchronization primitives */
+    Mutex lock;
+    Cond producer;
+    Cond consumer;
 };
 
 /* Functions */

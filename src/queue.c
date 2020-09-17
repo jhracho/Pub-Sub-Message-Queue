@@ -8,8 +8,17 @@
  */
 Queue * queue_create() {
     Queue *q = calloc(1, sizeof(Queue));
-    
-    return q;
+    if (q){
+        q->head = NULL;
+        q->tail = NULL;
+        q->size = 0;
+
+        mutex_init(&q->lock, NULL);
+        cond_init(&q->producer, NULL);
+        cond_init(&q->consumer, NULL);
+        return q;
+    } 
+    return NULL;
 }
 
 /**
@@ -32,6 +41,8 @@ void queue_push(Queue *q, Request *r) {
  * @param   q       Queue structure.
  * @return  Request structure.
  */
+
+// POP CAN BLOCK... check if the queue is empty
 Request * queue_pop(Queue *q) {
     return NULL;
 }
