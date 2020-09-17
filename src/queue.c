@@ -9,10 +9,6 @@
 Queue * queue_create() {
     Queue *q = calloc(1, sizeof(Queue));
     if (q){
-        //q->head = NULL;
-        //q->tail = NULL;
-        //q->size = 0;
-
         mutex_init(&q->lock, NULL);
         cond_init(&q->block, NULL);
         return q;
@@ -62,8 +58,9 @@ void queue_push(Queue *q, Request *r) {
     r->next = NULL;
     q->size++;
     
-    // Concurrency stuff
+    // Send those signals yo
     mutex_unlock(&q->lock);
+    cond_signal(&q->block);
 }
 
 /**
@@ -76,7 +73,7 @@ void queue_push(Queue *q, Request *r) {
 Request * queue_pop(Queue *q) {
     // Block Pop :)
     mutex_lock(&q->lock);
-    if (q->size == 0)
+    while (q->size == 0)
         cond_wait(&q->block, &q->lock);
 
     // Update Queue data
@@ -85,8 +82,8 @@ Request * queue_pop(Queue *q) {
     q->size--;
 
     // Unlock the lock yo
-    
     mutex_unlock(&q->lock);
+
     return pop;
 }
 
