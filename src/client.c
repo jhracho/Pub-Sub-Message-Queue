@@ -26,9 +26,9 @@ void * mq_puller(void *);
 MessageQueue * mq_create(const char *name, const char *host, const char *port) {
     MessageQueue *mq = calloc(1, sizeof(MessageQueue));
     if (mq) {
-        //mq->name = name;
-        //mq->host = host;
-        //mq->port = port;
+        mq->name = strdup((char *)name);
+        mq->host = strdup((char *)host);
+        mq->port = strdup((char *)port);
         mq->outgoing = calloc(1, sizeof(Queue));
         mq->incoming = calloc(1, sizeof(Queue));
         mq->shutdown = false;
@@ -42,6 +42,12 @@ MessageQueue * mq_create(const char *name, const char *host, const char *port) {
  */
 void mq_delete(MessageQueue *mq) {
     if (mq) {
+        free(mq->name);
+        free(mq->host);
+        free(mq->port);
+        queue_delete(mq->outgoing);
+        queue_delete(mq->incoming);
+        free(mq);
     }
 }
 
@@ -53,9 +59,8 @@ void mq_delete(MessageQueue *mq) {
  */
 void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
     Request *r = request_create("PUT",topic,body);
-
+    mq->outgoing->tail->next = r;
     mq->outgoing->tail = r;
-    request_delete(r);
 }
 
 /**
@@ -64,10 +69,11 @@ void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
  * @return  Newly allocated message body (must be freed).
  */
 char * mq_retrieve(MessageQueue *mq) {
-    Request *r = mq->incoming->head;
-    if (!mq){
+    Request *r = request_create("GET", mq->incoming->head->uri, NULL);
+    if (!r){
         
     }
+    mq->incoming->head = mq->incoming->head->next;
     return r->body;
 }
 
@@ -77,7 +83,9 @@ char * mq_retrieve(MessageQueue *mq) {
  * @param   topic   Topic string to subscribe to.
  **/
 void mq_subscribe(MessageQueue *mq, const char *topic) {
-    //mq->outgoing->uri = topic;
+    uri = "/subscription/" + mq->name + "/" + topic; //use sprintf
+    Request *r = request_create("PUT", uri, NULL);
+    queue_push(mq->outgoing, r);
 }
 
 /**
@@ -86,7 +94,8 @@ void mq_subscribe(MessageQueue *mq, const char *topic) {
  * @param   topic   Topic string to unsubscribe from.
  **/
 void mq_unsubscribe(MessageQueue *mq, const char *topic) {
-
+    uri = "/subscription/" + mq->name + "/" + topic;
+    Request *r = request_create("DELETE", uri, NULL);
 }
 
 /**
@@ -111,7 +120,7 @@ void mq_stop(MessageQueue *mq) {
  * @param   mq      Message Queue structure.
  */
 bool mq_shutdown(MessageQueue *mq) {
-    return false;
+    return (mq->shutdown);
 }
 
 /* Internal Functions */
