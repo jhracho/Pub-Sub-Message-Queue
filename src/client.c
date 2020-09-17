@@ -26,9 +26,9 @@ void * mq_puller(void *);
 MessageQueue * mq_create(const char *name, const char *host, const char *port) {
     MessageQueue *mq = calloc(1, sizeof(MessageQueue));
     if (mq) {
-        mq->name = strdup((char *)name);
-        mq->host = strdup((char *)host);
-        mq->port = strdup((char *)port);
+        //mq->name = strdup((char *)name);
+        //mq->host = strdup((char *)host);
+        //mq->port = strdup((char *)port);
         mq->outgoing = calloc(1, sizeof(Queue));
         mq->incoming = calloc(1, sizeof(Queue));
         mq->shutdown = false;
@@ -83,9 +83,9 @@ char * mq_retrieve(MessageQueue *mq) {
  * @param   topic   Topic string to subscribe to.
  **/
 void mq_subscribe(MessageQueue *mq, const char *topic) {
-    uri = "/subscription/" + mq->name + "/" + topic; //use sprintf
-    Request *r = request_create("PUT", uri, NULL);
-    queue_push(mq->outgoing, r);
+    //uri = "/subscription/" + mq->name + "/" + topic; //use sprintf
+    //Request *r = request_create("PUT", uri, NULL);
+    //queue_push(mq->outgoing, r);
 }
 
 /**
@@ -94,8 +94,8 @@ void mq_subscribe(MessageQueue *mq, const char *topic) {
  * @param   topic   Topic string to unsubscribe from.
  **/
 void mq_unsubscribe(MessageQueue *mq, const char *topic) {
-    uri = "/subscription/" + mq->name + "/" + topic;
-    Request *r = request_create("DELETE", uri, NULL);
+    //uri = "/subscription/" + mq->name + "/" + topic;
+    //Request *r = request_create("DELETE", uri, NULL);
 }
 
 /**
