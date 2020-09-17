@@ -59,8 +59,8 @@ void queue_push(Queue *q, Request *r) {
     q->size++;
     
     // Send those signals yo
-    mutex_unlock(&q->lock);
     cond_signal(&q->block);
+    mutex_unlock(&q->lock);
 }
 
 /**
