@@ -18,8 +18,9 @@ Request * request_create(const char *method, const char *uri, const char *body) 
         r->method = strdup((char *)method); 
         r->uri = strdup((char *)uri);
         r->body = strdup((char *)body);  
+        return r;
     }
-    return r;
+    return NULL;
 }
 
 /**
