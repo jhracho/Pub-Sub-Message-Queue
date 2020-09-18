@@ -71,9 +71,7 @@ void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
  */
 char * mq_retrieve(MessageQueue *mq) {
     Request *r = request_create("GET", mq->incoming->head->uri, NULL);
-    if (!r){
-        
-    }
+    
     mq->incoming->head = mq->incoming->head->next;
     return r->body;
 }
@@ -106,6 +104,11 @@ void mq_unsubscribe(MessageQueue *mq, const char *topic) {
  *  2. Second thread should continuously receive reqeusts to incoming queue.
  * @param   mq      Message Queue structure.
  */
+
+// QUESTIONS
+// Where do the things we push / pull go?
+// Where do we call this code
+// Should we do an infinite loop? Or no
 void mq_start(MessageQueue *mq) {
 }
 
@@ -114,7 +117,14 @@ void mq_start(MessageQueue *mq) {
  * sentinel messages
  * @param   mq      Message Queue structure.
  */
+
+// QUESTIONS
+// What are sentinel messages?
+// What do we do with them in other functions / programs?
 void mq_stop(MessageQueue *mq) {
+    // TODO call mq_subscribe on a SENTINEL topic
+    // just call it sentinel and all will be ok
+    // Also change mq->shutdown
 }
 
 /**
@@ -131,16 +141,19 @@ bool mq_shutdown(MessageQueue *mq) {
  * Pusher thread takes messages from outgoing queue and sends them to server.
  * @param   arg     Message Queue structure.
  **/
-void * mq_pusher(void *arg) {
-    MessageQueue *mq = (MessageQueue *) arg;           // set arg
-    char buffer[BUFSIZ];                               // define buffer
-    while (!mq_shutdown(mq)){
-        Request *r = queue_pop(mq->outgoing);          // pop request
-        request_delete(r);                             // free request
-        FILE *fs = socket_connect(mq->host, mq->port); // connect to server
-        request_write(r, fs);                          // write request to server
 
-        while(fgets(buffer, BUFSIZ, fs))               // read response
+// QUESTIONS
+// How do we read the response?
+void * mq_pusher(void *arg) {
+    MessageQueue *mq = (MessageQueue *) arg;              // set arg
+    char buffer[BUFSIZ];                                  // define buffer
+    while (!mq_shutdown(mq)){
+        Request *r = queue_pop(mq->outgoing);             // pop request
+        request_delete(r);                                // free request
+        FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
+        request_write(r, fs);                             // write request to server
+
+        while(fgets(buffer, BUFSIZ, fs))                  // read response
             continue;
     }
 
@@ -152,10 +165,31 @@ void * mq_pusher(void *arg) {
  * incoming queue.
  * @param   arg     Message Queue structure.
  **/
+
+// QUESTIONS
+// Do we have to do mq_retrieve or do the Request *new thing?
+// How do we read the response?
+// What do we do if there is no request body?
 void * mq_puller(void *arg) {
     MessageQueue *mq = (MessageQueue *)arg;
+    char buffer[BUFSIZ];                                      // set up buffer
+    int length;                                               // set up length
     while (!mq_shutdown(mq)){
-        Request *new = request_create(NULL, NULL, NULL);
+        Request *r = request_create("GET", mq->name, NULL);   // make empty request
+        FILE *fs = socket_connect(mq->host, mq->port);        // connect to server
+        request_write(r, fs);                                 // write request
+        char *response = fgets(buffer, BUFSIZ, fs);           // gets the response
+        char *rCode = strstr(response, "200 OK");             // checks for response
+        if (streq(rCode, "200 OK")){                          // checks for 200 OK
+            while (fgets(buffer, BUFSIZ, response) && !streq(buffer, "\r\n"))
+                sscanf(buffer, "Content-Length:%d", &length);
+        
+            r->body = malloc(length * sizeof(char) + 1);
+            fread(r->body, length, 1, socket);
+        }
+
+        if (length != 0)
+            queue_push(mq->incoming, r);
     }
 
     return NULL;
