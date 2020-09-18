@@ -33,6 +33,8 @@ MessageQueue * mq_create(const char *name, const char *host, const char *port) {
         mq->incoming = queue_create();
         mq->shutdown = false;
 
+        mutex_init(&mq->lock, NULL);
+
         return mq;
     }
     return NULL;
@@ -119,13 +121,11 @@ void mq_unsubscribe(MessageQueue *mq, const char *topic) {
 // Should we do an infinite loop? Or no
 void mq_start(MessageQueue *mq) {
     // Subscribe to Sentinel
-    mq_subscribe(mq->name, SENTINEL);
+    mq_subscribe(mq, SENTINEL);
 
-    // Initialize and start threads
-    Thread pusher;
-    Thread puller;
-    thread_create(&pusher, NULL, mq_pusher, mq);
-    thread_create(&puller, NULL, mq_puller, mq);    
+    // Initialize and start threads 
+    thread_create(&mq->pusher, NULL, mq_pusher, mq);
+    thread_create(&mq->puller, NULL, mq_puller, mq);    
 }
 
 /**
@@ -138,16 +138,16 @@ void mq_start(MessageQueue *mq) {
 // What are sentinel messages?
 // What do we do with them in other functions / programs?
 void mq_stop(MessageQueue *mq) {
-    // TODO call mq_publish on a SENTINEL topic
-    // just call it sentinel and all will be ok
-    // Also change mq->shutdown
-    mq_publish(mq->name, SENTINEL, SENTINEL);
+    mq_publish(mq, SENTINEL, SENTINEL);
+
+    // Lock and change the variable
+    mutex_lock(&q->lock);
     mq->shutdown = true;
+    mutex_unlock(&q->lock);
 
     // TODO join threads pusher and puller
     thread_join(&pusher, NULL);
     thread_join(&puller, NULL);
-
 }
 
 /**
@@ -155,7 +155,10 @@ void mq_stop(MessageQueue *mq) {
  * @param   mq      Message Queue structure.
  */
 bool mq_shutdown(MessageQueue *mq) {
-    return (mq->shutdown);
+    mutex_lock(&q->lock);
+    bool status = mq->shutdown;
+    mutex_unlock(&q->lock);
+    return (status);
 }
 
 /* Internal Functions */
