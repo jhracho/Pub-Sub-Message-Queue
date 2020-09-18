@@ -60,7 +60,7 @@ void mq_delete(MessageQueue *mq) {
  * @param   body    Message body to publish.
  */
 void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
-    Request *r = request_create("PUT",topic,body);  // build request with the body
+    Request *r = request_create("PUT", topic, body);   // build request with the body
     queue_push(mq->outgoing, r);                       // push request to outgoing    
 }
 
@@ -69,11 +69,19 @@ void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
  * @param   mq      Message Queue structure.
  * @return  Newly allocated message body (must be freed).
  */
+
+// pop stack
+// check if r->body is null and contains the sentinel value
+// If it does then just return null
 char * mq_retrieve(MessageQueue *mq) {
-    Request *r = request_create("GET", mq->incoming->head->uri, NULL);
+    Request *r = queue_pop(mq->incoming);
     
-    mq->incoming->head = mq->incoming->head->next;
-    return r->body;
+    if (r->body != NULL){
+        char *body = strdup(r->body);
+        return body;
+    }
+    else
+        return NULL;
 }
 
 /**
@@ -110,6 +118,14 @@ void mq_unsubscribe(MessageQueue *mq, const char *topic) {
 // Where do we call this code
 // Should we do an infinite loop? Or no
 void mq_start(MessageQueue *mq) {
+    // Subscribe to Sentinel
+    mq_subscribe(mq->name, SENTINEL);
+
+    // Initialize and start threads
+    Thread pusher;
+    Thread puller;
+    thread_create(&pusher, NULL, mq_pusher, mq);
+    thread_create(&puller, NULL, mq_puller, mq);    
 }
 
 /**
@@ -122,9 +138,14 @@ void mq_start(MessageQueue *mq) {
 // What are sentinel messages?
 // What do we do with them in other functions / programs?
 void mq_stop(MessageQueue *mq) {
-    // TODO call mq_subscribe on a SENTINEL topic
+    // TODO call mq_publish on a SENTINEL topic
     // just call it sentinel and all will be ok
     // Also change mq->shutdown
+    mq_publish(mq->name, SENTINEL, SENTINEL);
+    mq->shutdown = true;
+
+    // TODO join threads pusher and puller
+
 }
 
 /**
@@ -154,6 +175,8 @@ void * mq_pusher(void *arg) {
 
         while(fgets(buffer, BUFSIZ, fs))                  // read response
             continue;
+        
+        buffer[strlen(buffer) - 1] = "\0";                // set last char to null
 
         // Cleanup
         request_delete(r);
@@ -184,13 +207,16 @@ void * mq_puller(void *arg) {
         char *response = fgets(buffer, BUFSIZ, fs);           // gets the response
         char *rCode = strstr(response, "200 OK");             // checks for response
         if (streq(rCode, "200 OK")){                          // checks for 200 OK
-            while (fgets(buffer, BUFSIZ, response) && !streq(buffer, "\r\n"))
+            while (fgets(buffer, BUFSIZ, fs) && !streq(buffer, "\r\n"))
                 sscanf(buffer, "Content-Length:%d", &length);
-        
-            r->body = malloc(length * sizeof(char) + 1);
-            fread(r->body, length, 1, socket);
+            
+            if (length > 0){
+                r->body = malloc(length * sizeof(char) + 1);
+                fread(r->body, length, 1, socket);
+            }
         }
-
+        
+        // if r->body != NULL
         if (length != 0)
             queue_push(mq->incoming, r);
         else
