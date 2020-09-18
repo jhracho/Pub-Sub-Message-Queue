@@ -149,12 +149,15 @@ void * mq_pusher(void *arg) {
     char buffer[BUFSIZ];                                  // define buffer
     while (!mq_shutdown(mq)){
         Request *r = queue_pop(mq->outgoing);             // pop request
-        request_delete(r);                                // free request
         FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
         request_write(r, fs);                             // write request to server
 
         while(fgets(buffer, BUFSIZ, fs))                  // read response
             continue;
+
+        // Cleanup
+        request_delete(r);
+        fclose(fs);
     }
 
     return NULL;
