@@ -145,6 +145,8 @@ void mq_stop(MessageQueue *mq) {
     mq->shutdown = true;
 
     // TODO join threads pusher and puller
+    thread_join(&pusher, NULL);
+    thread_join(&puller, NULL);
 
 }
 
