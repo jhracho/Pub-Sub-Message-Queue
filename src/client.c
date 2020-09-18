@@ -193,6 +193,8 @@ void * mq_puller(void *arg) {
 
         if (length != 0)
             queue_push(mq->incoming, r);
+        else
+            request_delete(r);
     }
 
     return NULL;
