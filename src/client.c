@@ -26,14 +26,16 @@ void * mq_puller(void *);
 MessageQueue * mq_create(const char *name, const char *host, const char *port) {
     MessageQueue *mq = calloc(1, sizeof(MessageQueue));
     if (mq) {
-        //mq->name = strdup((char *)name);
-        //mq->host = strdup((char *)host);
-        //mq->port = strdup((char *)port);
-        mq->outgoing = calloc(1, sizeof(Queue));
-        mq->incoming = calloc(1, sizeof(Queue));
+        strcpy(mq->name, (char *) name);
+        strcpy(mq->host, (char *) host);
+        strcpy(mq->port, (char *) port);
+        mq->outgoing = queue_create();
+        mq->incoming = queue_create();
         mq->shutdown = false;
+
+        return mq;
     }
-    return mq;
+    return NULL;
 }
 
 /**
@@ -58,9 +60,8 @@ void mq_delete(MessageQueue *mq) {
  * @param   body    Message body to publish.
  */
 void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
-    Request *r = request_create("PUT",topic,body);
-    mq->outgoing->tail->next = r;
-    mq->outgoing->tail = r;
+    Request *r = request_create("PUT",topic,body);  // build request with the body
+    queue_push(mq->outgoing, r);                       // push request to outgoing    
 }
 
 /**
@@ -83,9 +84,9 @@ char * mq_retrieve(MessageQueue *mq) {
  * @param   topic   Topic string to subscribe to.
  **/
 void mq_subscribe(MessageQueue *mq, const char *topic) {
-    //uri = "/subscription/" + mq->name + "/" + topic; //use sprintf
-    //Request *r = request_create("PUT", uri, NULL);
-    //queue_push(mq->outgoing, r);
+    const char *uri = sprintf("/subscription/%s/%s", mq->name, topic); // create uri
+    Request *r = request_create("PUT", uri, NULL);
+    queue_push(mq->outgoing, r);
 }
 
 /**
@@ -94,8 +95,9 @@ void mq_subscribe(MessageQueue *mq, const char *topic) {
  * @param   topic   Topic string to unsubscribe from.
  **/
 void mq_unsubscribe(MessageQueue *mq, const char *topic) {
-    //uri = "/subscription/" + mq->name + "/" + topic;
-    //Request *r = request_create("DELETE", uri, NULL);
+    const char *uri = sprintf("/subscription/%s/%s", mq->name, topic);
+    Request *r = request_create("DELETE", uri, NULL);
+    queue_push(mq->outgoing, r);
 }
 
 /**
@@ -130,6 +132,18 @@ bool mq_shutdown(MessageQueue *mq) {
  * @param   arg     Message Queue structure.
  **/
 void * mq_pusher(void *arg) {
+    MessageQueue *mq = (MessageQueue *) arg;           // set arg
+    char buffer[BUFSIZ];                               // define buffer
+    while (!mq_shutdown(mq)){
+        Request *r = queue_pop(mq->outgoing);          // pop request
+        request_delete(r);                             // free request
+        FILE *fs = socket_connect(mq->host, mq->port); // connect to server
+        request_write(r, fs);                          // write request to server
+
+        while(fgets(buffer, BUFSIZ, fs))               // read response
+            continue;
+    }
+
     return NULL;
 }
 
@@ -139,6 +153,11 @@ void * mq_pusher(void *arg) {
  * @param   arg     Message Queue structure.
  **/
 void * mq_puller(void *arg) {
+    MessageQueue *mq = (MessageQueue *)arg;
+    while (!mq_shutdown(mq)){
+        Request *new = request_create(NULL, NULL, NULL);
+    }
+
     return NULL;
 }
 
