@@ -92,7 +92,8 @@ char * mq_retrieve(MessageQueue *mq) {
  * @param   topic   Topic string to subscribe to.
  **/
 void mq_subscribe(MessageQueue *mq, const char *topic) {
-    const char *uri = sprintf("/subscription/%s/%s", mq->name, topic); // create uri
+    char uri[BUFSIZ];
+    sprintf(uri, "/subscription/%s/%s", mq->name, topic); // create uri
     Request *r = request_create("PUT", uri, NULL);
     queue_push(mq->outgoing, r);
 }
@@ -103,7 +104,8 @@ void mq_subscribe(MessageQueue *mq, const char *topic) {
  * @param   topic   Topic string to unsubscribe from.
  **/
 void mq_unsubscribe(MessageQueue *mq, const char *topic) {
-    const char *uri = sprintf("/subscription/%s/%s", mq->name, topic);
+    char uri[BUFSIZ];
+    sprintf(uri, "/subscription/%s/%s", mq->name, topic);
     Request *r = request_create("DELETE", uri, NULL);
     queue_push(mq->outgoing, r);
 }
@@ -141,13 +143,13 @@ void mq_stop(MessageQueue *mq) {
     mq_publish(mq, SENTINEL, SENTINEL);
 
     // Lock and change the variable
-    mutex_lock(&q->lock);
+    mutex_lock(&mq->lock);
     mq->shutdown = true;
-    mutex_unlock(&q->lock);
+    mutex_unlock(&mq->lock);
 
     // TODO join threads pusher and puller
-    thread_join(&pusher, NULL);
-    thread_join(&puller, NULL);
+    thread_join(mq->pusher, NULL);
+    thread_join(mq->puller, NULL);
 }
 
 /**
@@ -155,9 +157,9 @@ void mq_stop(MessageQueue *mq) {
  * @param   mq      Message Queue structure.
  */
 bool mq_shutdown(MessageQueue *mq) {
-    mutex_lock(&q->lock);
+    mutex_lock(&mq->lock);
     bool status = mq->shutdown;
-    mutex_unlock(&q->lock);
+    mutex_unlock(&mq->lock);
     return (status);
 }
 
@@ -181,7 +183,7 @@ void * mq_pusher(void *arg) {
         while(fgets(buffer, BUFSIZ, fs))                  // read response
             continue;
         
-        buffer[strlen(buffer) - 1] = "\0";                // set last char to null
+        buffer[strlen(buffer)-1] = '\0';                // set last char to null
 
         // Cleanup
         request_delete(r);
@@ -217,7 +219,7 @@ void * mq_puller(void *arg) {
             
             if (length > 0){
                 r->body = malloc(length * sizeof(char) + 1);
-                fread(r->body, length, 1, socket);
+                fread(r->body, length, 1, fs);
             }
         }
         
