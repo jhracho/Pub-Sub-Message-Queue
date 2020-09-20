@@ -17,10 +17,16 @@ Request * request_create(const char *method, const char *uri, const char *body) 
     if (r){
         if(method)
             r->method = strdup((char *)method); 
+        else
+            r->method = NULL;
         if(uri)
             r->uri = strdup((char *)uri);
+        else
+            r->uri = NULL;
         if(body)
-        r->body = strdup((char *)body);  
+            r->body = strdup((char *)body);  
+        else
+            r->body = NULL;
         return r;
     }
     return NULL;
@@ -49,11 +55,19 @@ void request_delete(Request *r) {
  * @param   fs          Socket file stream.
  */
 void request_write(Request *r, FILE *fs) {
-    int length = strlen(r->body);
-    fprintf(fs, "%s %s HTTP/1.0\r\n", r->method, r->uri);
-    fprintf(fs, "Content-Length: %d\r\n", length);
-    fprintf(fs, "\r\n");
-    fprintf(fs, "%s", r->body);
+    int length = 0;
+   
+    if (r->body){
+        length = strlen(r->body);
+        fprintf(fs, "%s %s HTTP/1.0\r\n", r->method, r->uri);
+        fprintf(fs, "Content-Length: %d\r\n", length);
+        fprintf(fs, "\r\n");
+        fprintf(fs, "%s", r->body);
+    }
+    else{
+        fprintf(fs, "%s %s HTTP/1.0\r\n", r->method, r->uri);
+        fprintf(fs, "\r\n");
+    }
 }
 
 /* vim: set expandtab sts=4 sw=4 ts=8 ft=c: */ 
