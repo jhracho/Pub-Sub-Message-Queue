@@ -118,17 +118,13 @@ void mq_unsubscribe(MessageQueue *mq, const char *topic) {
  * @param   mq      Message Queue structure.
  */
 
-// QUESTIONS
-// Where do the things we push / pull go?
-// Where do we call this code
-// Should we do an infinite loop? Or no
 void mq_start(MessageQueue *mq) {
-    // Subscribe to Sentinel
-    mq_subscribe(mq, SENTINEL);
-
     // Initialize and start threads 
     thread_create(&mq->pusher, NULL, mq_pusher, mq);
     thread_create(&mq->puller, NULL, mq_puller, mq);    
+
+    // Subscribe to sentinel
+    mq_subscribe(mq, SENTINEL);
 }
 
 /**
@@ -137,9 +133,6 @@ void mq_start(MessageQueue *mq) {
  * @param   mq      Message Queue structure.
  */
 
-// QUESTIONS
-// What are sentinel messages?
-// What do we do with them in other functions / programs?
 void mq_stop(MessageQueue *mq) {
     mq_publish(mq, SENTINEL, SENTINEL);
 
@@ -171,22 +164,20 @@ bool mq_shutdown(MessageQueue *mq) {
  * @param   arg     Message Queue structure.
  **/
 
-// QUESTIONS
-// How do we read the response?
 void * mq_pusher(void *arg) {
     MessageQueue *mq = (MessageQueue *) arg;              // set arg
     char buffer[BUFSIZ];                                  // define buffer
     while (!mq_shutdown(mq)){
         Request *r = queue_pop(mq->outgoing);             // pop request
-        FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
-        request_write(r, fs);                             // write request to server
-
-        while(fgets(buffer, BUFSIZ, fs))                  // read response
-            buffer[strlen(buffer)-1] = '\0';                // set last char to null
-
-        
+        if (r){
+            FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
+            if (fs){
+                request_write(r, fs);                             // write request to server
+                while(fgets(buffer, BUFSIZ, fs))                  // read response
+                    buffer[strlen(buffer)-1] = '\0';                // set last char to null
+            }
+        }
         request_delete(r);
-        fclose(fs);
     }
 
     return NULL;
@@ -198,30 +189,44 @@ void * mq_pusher(void *arg) {
  * @param   arg     Message Queue structure.
  **/
 
-// QUESTIONS
-// Do we have to do mq_retrieve or do the Request *new thing?
-// How do we read the response?
-// What do we do if there is no request body?
 void * mq_puller(void *arg) {
     MessageQueue *mq = (MessageQueue *)arg;
     char buffer[BUFSIZ];                                      // set up buffer
-    int length;                                               // set up length
+    size_t length;                                               // set up length
+    FILE *fs;
+    char uri[BUFSIZ];
     while (!mq_shutdown(mq)){
-        Request *r = request_create("GET", mq->name, NULL);   // make empty request
-        FILE *fs = socket_connect(mq->host, mq->port);        // connect to server
-        request_write(r, fs);                                 // write request
-        char *response = fgets(buffer, BUFSIZ, fs);           // gets the response
-        char *rCode = strstr(response, "200 OK");             // checks for response
-        if (streq(rCode, "200 OK")){                          // checks for 200 OK
-            while (fgets(buffer, BUFSIZ, fs) && !streq(buffer, "\r\n"))
-                sscanf(buffer, "Content-Length:%d", &length);
-            
-            if (length > 0){
-                r->body = malloc(length * sizeof(char) + 1);
-                fread(r->body, length, 1, fs);
+        sprintf(uri, "/queue/%s", mq->name);
+        Request *r = request_create("GET", uri, NULL);            // make empty request
+        if (r){
+            fs = socket_connect(mq->host, mq->port);                 // connect to server
+            if (fs){
+                request_write(r, fs);                                          // write request
+                char *response = fgets(buffer, BUFSIZ, fs);                    // gets the response
+                if (strstr(response, "200 OK")){                                   // checks for 200 OK
+                    while (fgets(buffer, BUFSIZ, fs) && !streq(buffer, "\r\n"))
+                        sscanf(buffer, "Content-Length:%ld", &length);
+                    if (length > 0)
+                        r->body = calloc(length + 1, sizeof(char));
+                    if (r->body)
+                        fread(r->body, 1, length, fs);
+                }
+                else{
+                    fclose(fs);
+                    request_delete(r);
+                    continue;
+                }
+            }
+            else{
+                fclose(fs);
+                request_delete(r);
+                continue;
             }
         }
-        
+        else{
+            request_delete(r);
+            continue;
+        }
         // if r->body != NULL
         if (length != 0)
             queue_push(mq->incoming, r);
