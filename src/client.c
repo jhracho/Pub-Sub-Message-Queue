@@ -84,6 +84,7 @@ char * mq_retrieve(MessageQueue *mq) {
     }
     else
         return NULL;
+    //test
 }
 
 /**
