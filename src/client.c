@@ -218,7 +218,6 @@ void * mq_puller(void *arg) {
                 }
             }
             else{
-                fclose(fs);
                 request_delete(r);
                 continue;
             }
