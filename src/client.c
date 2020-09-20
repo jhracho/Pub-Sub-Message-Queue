@@ -169,15 +169,15 @@ void * mq_pusher(void *arg) {
     char buffer[BUFSIZ];                                  // define buffer
     while (!mq_shutdown(mq)){
         Request *r = queue_pop(mq->outgoing);             // pop request
-        FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
-        request_write(r, fs);                             // write request to server
-
-        while(fgets(buffer, BUFSIZ, fs))                  // read response
-            buffer[strlen(buffer)-1] = '\0';                // set last char to null
-
-        
+        if (r){
+            FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
+            if (fs){
+                request_write(r, fs);                             // write request to server
+                while(fgets(buffer, BUFSIZ, fs))                  // read response
+                    buffer[strlen(buffer)-1] = '\0';                // set last char to null
+            }
+        }
         request_delete(r);
-        fclose(fs);
     }
 
     return NULL;
@@ -211,15 +211,22 @@ void * mq_puller(void *arg) {
                     if (r->body)
                         fread(r->body, 1, length, fs);
                 }
-                else
+                else{
+                    fclose(fs);
+                    request_delete(r);
                     continue;
+                }
             }
-            else
+            else{
+                fclose(fs);
+                request_delete(r);
                 continue;
+            }
         }
-        else
+        else{
+            request_delete(r);
             continue;
-        
+        }
         // if r->body != NULL
         if (length != 0)
             queue_push(mq->incoming, r);
