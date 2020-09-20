@@ -182,11 +182,9 @@ void * mq_pusher(void *arg) {
         request_write(r, fs);                             // write request to server
 
         while(fgets(buffer, BUFSIZ, fs))                  // read response
-            continue;
-        
-        buffer[strlen(buffer)-1] = '\0';                // set last char to null
+            buffer[strlen(buffer)-1] = '\0';                // set last char to null
 
-        // Cleanup
+        
         request_delete(r);
         fclose(fs);
     }
@@ -229,6 +227,7 @@ void * mq_puller(void *arg) {
             queue_push(mq->incoming, r);
         else
             request_delete(r);
+        fclose(fs);
     }
 
     return NULL;
