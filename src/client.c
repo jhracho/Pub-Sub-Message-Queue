@@ -194,8 +194,10 @@ void * mq_puller(void *arg) {
     char buffer[BUFSIZ];                                      // set up buffer
     size_t length;                                               // set up length
     FILE *fs;
+    char uri[BUFSIZ];
     while (!mq_shutdown(mq)){
-        Request *r = request_create("GET", mq->name, NULL);            // make empty request
+        sprintf(uri, "/queue/%s", mq->name);
+        Request *r = request_create("GET", uri, NULL);            // make empty request
         if (r){
             fs = socket_connect(mq->host, mq->port);                 // connect to server
             if (fs){
