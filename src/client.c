@@ -80,7 +80,7 @@ void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
 char * mq_retrieve(MessageQueue *mq) {
     Request *r = queue_pop(mq->incoming);
     
-    if (r->body != NULL){
+    if (r->body != NULL || !streq(r->body, SENTINEL)){
         char *body = strdup(r->body);
         return body;
     }

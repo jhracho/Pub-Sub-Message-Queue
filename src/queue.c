@@ -82,6 +82,7 @@ Request * queue_pop(Queue *q) {
     q->size--;
 
     // Unlock the lock yo
+    //cond_signal(&q->block);
     mutex_unlock(&q->lock);
 
     return pop;
