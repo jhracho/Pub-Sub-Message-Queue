@@ -62,7 +62,9 @@ void mq_delete(MessageQueue *mq) {
  * @param   body    Message body to publish.
  */
 void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
-    Request *r = request_create("PUT", topic, body);   // build request with the body
+    char uri[BUFSIZ];
+    sprintf(uri, "/topic/%s", topic);
+    Request *r = request_create("PUT", uri, body);   // build request with the body
     queue_push(mq->outgoing, r);                       // push request to outgoing    
 }
 
@@ -119,6 +121,8 @@ void mq_unsubscribe(MessageQueue *mq, const char *topic) {
  */
 
 void mq_start(MessageQueue *mq) {
+    //mq_subscribe(mq, SENTINEL);
+
     // Initialize and start threads 
     thread_create(&mq->pusher, NULL, mq_pusher, mq);
     thread_create(&mq->puller, NULL, mq_puller, mq);    
@@ -166,18 +170,21 @@ bool mq_shutdown(MessageQueue *mq) {
 
 void * mq_pusher(void *arg) {
     MessageQueue *mq = (MessageQueue *) arg;              // set arg
-    char buffer[BUFSIZ];                                  // define buffer
+
     while (!mq_shutdown(mq)){
         Request *r = queue_pop(mq->outgoing);             // pop request
-        if (r){
-            FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
-            if (fs){
-                request_write(r, fs);                             // write request to server
-                while(fgets(buffer, BUFSIZ, fs))                  // read response
-                    buffer[strlen(buffer)-1] = '\0';                // set last char to null
-            }
+        FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
+        if (!fs)
+            continue;
+        else{
+            char buffer[BUFSIZ];
+            request_write(r, fs);                             // write request to server
+            while(fgets(buffer, BUFSIZ, fs))                  // read response
+                buffer[strlen(buffer)-1] = '\0';                // set last char to null
+    
+            request_delete(r);
+            fclose(fs);
         }
-        request_delete(r);
     }
 
     return NULL;
@@ -191,47 +198,38 @@ void * mq_pusher(void *arg) {
 
 void * mq_puller(void *arg) {
     MessageQueue *mq = (MessageQueue *)arg;
-    char buffer[BUFSIZ];                                      // set up buffer
-    size_t length;                                               // set up length
+
     FILE *fs;
-    char uri[BUFSIZ];
     while (!mq_shutdown(mq)){
+        char uri[BUFSIZ];
         sprintf(uri, "/queue/%s", mq->name);
         Request *r = request_create("GET", uri, NULL);            // make empty request
-        if (r){
-            fs = socket_connect(mq->host, mq->port);                 // connect to server
-            if (fs){
-                request_write(r, fs);                                          // write request
-                char *response = fgets(buffer, BUFSIZ, fs);                    // gets the response
-                if (strstr(response, "200 OK")){                                   // checks for 200 OK
-                    while (fgets(buffer, BUFSIZ, fs) && !streq(buffer, "\r\n"))
-                        sscanf(buffer, "Content-Length:%ld", &length);
-                    if (length > 0)
-                        r->body = calloc(length + 1, sizeof(char));
-                    if (r->body)
-                        fread(r->body, 1, length, fs);
+        fs = socket_connect(mq->host, mq->port);                 // connect to server
+        if (fs){
+            request_write(r, fs);
+            char buffer[BUFSIZ];            // write request
+            if (fgets(buffer, BUFSIZ, fs) && strstr(buffer, "200 OK")){   
+                int length = 0;                
+                while (fgets(buffer, BUFSIZ, fs) && !streq(buffer, "\r\n"))
+                    sscanf(buffer, "Content-Length:%d", &length);
+                if (length > 0){
+                    r->body = calloc(length + 1, sizeof(char));
+                    fread(r->body, 1, length, fs);
                 }
-                else{
-                    fclose(fs);
+                if (r->body)
+                    queue_push(mq->incoming, r);
+                else
                     request_delete(r);
-                    continue;
-                }
             }
             else{
                 request_delete(r);
-                continue;
+                while(fgets(buffer, BUFSIZ, fs))
+                    continue;
             }
+            fclose(fs);
         }
-        else{
-            request_delete(r);
-            continue;
-        }
-        // if r->body != NULL
-        if (length != 0)
-            queue_push(mq->incoming, r);
         else
             request_delete(r);
-        fclose(fs);
     }
 
     return NULL;
