@@ -82,11 +82,13 @@ char * mq_retrieve(MessageQueue *mq) {
     
     if (r->body != NULL || !streq(r->body, SENTINEL)){
         char *body = strdup(r->body);
+        request_delete(r);
         return body;
     }
-    else
+    else{
+        request_delete(r);
         return NULL;
-    //test
+    }
 }
 
 /**
