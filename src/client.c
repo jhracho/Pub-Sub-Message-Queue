@@ -46,9 +46,9 @@ MessageQueue * mq_create(const char *name, const char *host, const char *port) {
  */
 void mq_delete(MessageQueue *mq) {
     if (mq) {
-        free(mq->name);
-        free(mq->host);
-        free(mq->port);
+        //free(mq->name);
+        //free(mq->host);
+        //free(mq->port);
         queue_delete(mq->outgoing);
         queue_delete(mq->incoming);
         free(mq);
@@ -80,7 +80,7 @@ void mq_publish(MessageQueue *mq, const char *topic, const char *body) {
 char * mq_retrieve(MessageQueue *mq) {
     Request *r = queue_pop(mq->incoming);
     
-    if (r->body != NULL || !streq(r->body, SENTINEL)){
+    if (r->body != NULL && !streq(r->body, SENTINEL)){
         char *body = strdup(r->body);
         request_delete(r);
         return body;
@@ -174,11 +174,12 @@ void * mq_pusher(void *arg) {
     MessageQueue *mq = (MessageQueue *) arg;              // set arg
 
     while (!mq_shutdown(mq)){
-        Request *r = queue_pop(mq->outgoing);             // pop request
+        //Request *r = queue_pop(mq->outgoing);             // pop request
         FILE *fs = socket_connect(mq->host, mq->port);    // connect to server
         if (!fs)
             continue;
         else{
+            Request *r = queue_pop(mq->outgoing);
             char buffer[BUFSIZ];
             request_write(r, fs);                             // write request to server
             while(fgets(buffer, BUFSIZ, fs))                  // read response
