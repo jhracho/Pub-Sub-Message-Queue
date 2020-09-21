@@ -17,12 +17,17 @@ CLIENT_LIBRARY  = lib/libmq_client.a
 TEST_SOURCES    = $(wildcard tests/test_*.c)
 TEST_OBJECTS    = $(TEST_SOURCES:.c=.o)
 TEST_PROGRAMS   = $(subst tests,bin,$(basename $(TEST_OBJECTS)))
+CHAT_APP		= bin/application
 
 # Rules
 
-all:	$(CLIENT_LIBRARY)
+all:	$(CLIENT_LIBRARY) $(CHAT_APP)
 
-%.o:			%.c $(CLIENT_HEADERS)
+$(CHAT_APP): 		bin/application.o $(CLIENT_LIBRARY)
+	@echo "Compiling $@"
+	@$(LD) $(LDFLAGS) -o $@ $^
+
+%.o:				%.c $(CLIENT_HEADERS)
 	@echo "Compiling $@"
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
@@ -30,11 +35,11 @@ $(CLIENT_LIBRARY):	$(CLIENT_OBJECTS)
 	@echo "Linking   $@"
 	@$(AR) $(ARFLAGS) $@ $^
 
-bin/%:  		tests/%.o $(CLIENT_LIBRARY)
+bin/%:  			tests/%.o $(CLIENT_LIBRARY)
 	@echo "Linking   $@"
 	@$(LD) $(LDFLAGS) -o $@ $^
 
-test:			$(TEST_PROGRAMS)
+test:				$(TEST_PROGRAMS)
 	@$(MAKE) -sk test-all
 
 test-all:   		test-request-unit test-queue-unit test-queue-functional test-echo-client
@@ -54,6 +59,10 @@ test-echo-client:	bin/test_echo_client
 clean:
 	@echo "Removing  objects"
 	@rm -f $(CLIENT_OBJECTS) $(TEST_OBJECTS)
+
+	@echo "Removing application items"
+	@rm -f bin/application.o
+	@rm -f bin/application
 
 	@echo "Removing  libraries"
 	@rm -f $(CLIENT_LIBRARY)
