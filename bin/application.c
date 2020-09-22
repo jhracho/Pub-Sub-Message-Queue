@@ -42,12 +42,16 @@ void menu(){
 void *outgoingFunc(void *arg){
 	MessageQueue *mq = (MessageQueue *)arg;
 	char message[BUFSIZ];
+	printf("%s: ", mq->name);
 	fgets(message, BUFSIZ, stdin);
-	//printf("DEBUG: Message sent %s\n", message);
+	char taggedMsg[BUFSIZ];
+	sprintf(taggedMsg, "%s %s", mq->name, message);    // Message: jhracho Hello
+	
 	while(!streq(message, "/quit\n")){
-		printf("Sending message: %s\n", message);
-		mq_publish(mq, TOPIC, message);
+		mq_publish(mq, TOPIC, taggedMsg);
+		printf("%s: ", mq->name);
 		fgets(message, BUFSIZ, stdin);
+		sprintf(taggedMsg, "%s %s", mq->name, message);
 	}
 	
 	mq_stop(mq);
@@ -56,12 +60,16 @@ void *outgoingFunc(void *arg){
 
 void *incomingFunc(void *arg){
 	MessageQueue *mq = (MessageQueue *)arg;
+	char sender[BUFSIZ];
+	char message[BUFSIZ];
 
 	while (!mq_shutdown(mq)){
-		char *message = mq_retrieve(mq);
-		if (message){
-			printf("%s: %s", mq->name, message);
-			free(message);
+		char *taggedMsg = mq_retrieve(mq);
+		if (taggedMsg){
+			sscanf(taggedMsg, "%s %s", sender, message);
+			if (!streq(sender, mq->name))
+				printf("%s: %s", sender, message);
+			free(taggedMsg);
 		}
 	}
 	return NULL;
