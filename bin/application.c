@@ -19,27 +19,10 @@ char *PROGRAM_NAME = NULL;
 FILE *fs;
 Thread incoming;
 Thread outgoing;
-Mutex  lock;
-//Cond   cond;
 
-
-// Infinite loop while the input is not /quit
-// fgets to grab input, streq to check command
-// fputs to display the output back to the screen
 void usage(int status){
-	fprintf(stderr, "Usage: %s {Host} {Port}\n", PROGRAM_NAME);
+	fprintf(stderr, "Usage: %s {Host} {Port 9000-9999}\n", PROGRAM_NAME);
 	exit(status);
-}
-
-
-// Move to usage
-void menu(){
-	printf("\n");
-	printf("/sub: Subscribe to a topic\n");
-	printf("/unsub: Unsubscribe from a topic\n");
-	printf("/pub: Go to topic\n");
-	printf("/quit: Exit program\n\n");
-	printf("Select an option: ");
 }
 
 void *outgoingFunc(void *arg){
@@ -82,6 +65,8 @@ void *incomingFunc(void *arg){
 }
 
 void messageBoard(MessageQueue *mq){
+	printf("*****Welcome to the Peter Bui Autonomous Zone (PBAZ)*****\n");
+	printf("************Type /quit to leave at any time.*************\n");
 	mq_subscribe(mq, TOPIC);
 	mq_start(mq);
 	thread_create(&incoming, NULL, incomingFunc, mq);
@@ -93,7 +78,7 @@ void messageBoard(MessageQueue *mq){
 
 int main(int argc, char *argv[]){
 	PROGRAM_NAME = argv[0];
-	if (argc == 1)
+	if (argc < 3)
 		usage(1);
 	
 	char *host = argv[1];
@@ -107,16 +92,9 @@ int main(int argc, char *argv[]){
 		finalPort = atoi(port);
 	}
 	
-	/*
-	char name[BUFSIZ];
-	printf("Enter your netid: ");
-	fgets(name, BUFSIZ, stdin);
-	*/
-
 	char *name = getenv("USER");
 	MessageQueue *mq = mq_create(name, host, port);
-	mutex_init(&lock, NULL);
-	//cond_init(&cond, NULL);
+	
 	if (!mq){
 		fprintf(stderr, "FATAL ERROR: MessageQueue %s creation failed", name);
 		exit(1);
