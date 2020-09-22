@@ -66,7 +66,7 @@ void *incomingFunc(void *arg){
 	while (!mq_shutdown(mq)){
 		char *taggedMsg = mq_retrieve(mq);
 		if (taggedMsg){
-			sscanf(taggedMsg, "%s %s", sender, message);
+			sscanf(taggedMsg, "%s %[^t\n]", sender, message);
 			if (!streq(sender, mq->name))
 				printf("%s: %s", sender, message);
 			free(taggedMsg);
