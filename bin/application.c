@@ -54,7 +54,6 @@ void *outgoingFunc(void *arg){
 		mq_publish(mq, TOPIC, taggedMsg);
 		
 		printf("%s: ", mq->name);
-		fflush(stdin);
 		fgets(message, BUFSIZ, stdin);
 		sprintf(taggedMsg, "%s %s", mq->name, message);
 	}
@@ -70,11 +69,12 @@ void *incomingFunc(void *arg){
 
 	while (!mq_shutdown(mq)){
 		char *taggedMsg = mq_retrieve(mq);
-		
+		fflush(stdout);
 		if (taggedMsg){
 			sscanf(taggedMsg, "%s %[^t\n]", sender, message);
-			if (!streq(sender, mq->name))
-				printf("%s: %s", sender, message);
+			if (!streq(sender, mq->name)){
+				printf("%s: %s\n", sender, message);
+			}
 			free(taggedMsg);
 		}
 	}
