@@ -34,6 +34,19 @@ MessageQueue *startup(char *name, char *host, char *port){
 	}
 }
 
+void menu(){
+	printf("1: Subscribe to a topic\n");
+	printf("2: Unsubscribe from a topic\n");
+	printf("3: Go to topic\n");
+	printf("4: Exit program\n\n");
+	printf("Select an option: ");
+}
+
+void message_board(MessageQueue *mq){
+
+
+}
+
 int main(int argc, char *argv[]){
 	PROGRAM_NAME = argv[0];
 	if (argc == 1)
@@ -42,16 +55,38 @@ int main(int argc, char *argv[]){
 	char *host = argv[1];
 	char *port = argv[2];
 	char name[BUFSIZ];
+	char topic[BUFSIZ];
 	printf("Enter your netid: ");
 	fgets(name, BUFSIZ, stdin);
 	
 	printf("DEBUG: Enterring startup\n");
 	MessageQueue *mq = startup(name, host, port);
 	printf("DEBUG: Returned from startup\n");
-	char buffer[BUFSIZ];
-	while(fgets(buffer, stdin,)){
-		if streq(buffer,)
-
+	char input[BUFSIZ];
+	int choice;
+	menu();
+	while(fgets(input, BUFSIZ, stdin)){
+		choice = atoi(input);
+		switch (choice){
+			case 1:
+				printf("Enter name of topic you would like to subscribe to: ");
+				fgets(topic, BUFSIZ, stdin);
+				mq_subscribe(mq,topic);
+				continue;
+			case 2:
+				printf("Enter name of topic you would like to unsubscribe from: ");
+				fgets(topic, BUFSIZ, stdin);
+				mq_unsubscribe(mq,topic);
+				continue;
+			case 3:
+				message_board(mq);
+				continue;
+			case 4:
+				printf("Quitting...");
+				break;	
+			default:
+				printf("Not a valid option. Please try again\n");
+		}
 	}
 	return 0;
 }
