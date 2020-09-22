@@ -19,6 +19,9 @@ char *PROGRAM_NAME = NULL;
 FILE *fs;
 Thread incoming;
 Thread outgoing;
+Mutex  lock;
+//Cond   cond;
+
 
 // Infinite loop while the input is not /quit
 // fgets to grab input, streq to check command
@@ -45,11 +48,13 @@ void *outgoingFunc(void *arg){
 	printf("%s: ", mq->name);
 	fgets(message, BUFSIZ, stdin);
 	char taggedMsg[BUFSIZ];
-	sprintf(taggedMsg, "%s %s", mq->name, message);    // Message: jhracho Hello
+	sprintf(taggedMsg, "%s %s\n", mq->name, message);    // Message: jhracho Hello
 	
 	while(!streq(message, "/quit\n")){
 		mq_publish(mq, TOPIC, taggedMsg);
+		
 		printf("%s: ", mq->name);
+		fflush(stdin);
 		fgets(message, BUFSIZ, stdin);
 		sprintf(taggedMsg, "%s %s", mq->name, message);
 	}
@@ -65,6 +70,7 @@ void *incomingFunc(void *arg){
 
 	while (!mq_shutdown(mq)){
 		char *taggedMsg = mq_retrieve(mq);
+		
 		if (taggedMsg){
 			sscanf(taggedMsg, "%s %[^t\n]", sender, message);
 			if (!streq(sender, mq->name))
@@ -109,6 +115,8 @@ int main(int argc, char *argv[]){
 
 	char *name = getenv("USER");
 	MessageQueue *mq = mq_create(name, host, port);
+	mutex_init(&lock, NULL);
+	//cond_init(&cond, NULL);
 	if (!mq){
 		fprintf(stderr, "FATAL ERROR: MessageQueue %s creation failed", name);
 		exit(1);
