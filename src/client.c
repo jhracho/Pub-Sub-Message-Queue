@@ -199,6 +199,7 @@ void * mq_pusher(void *arg) {
  * @param   arg     Message Queue structure.
  **/
 
+// Done
 void * mq_puller(void *arg) {
     MessageQueue *mq = (MessageQueue *)arg;
 
