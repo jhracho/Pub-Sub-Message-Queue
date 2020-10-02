@@ -1,0 +1,73 @@
+Source Code:
+  A. General:
+    1. Builds and cleans without warnings or errors:
+      Score: 0.5
+    2. Uses system calls appropriately:
+      Score: 0.5
+    3. Manages resources such as memory and files appropriately:
+      Score: 1.0
+    4. Is consistent, readable, and organized:
+      Comment: some dead code, some duplicate code (re-factor)
+      Score: 0.75
+    5. Has regular commits and submitted on-time:
+      Score: 1.0
+  B. Request:
+    1. Implements request_create properly:
+      Score: 0.5
+    2. Implements request_delete properly:
+      Score: 0.5
+    3. Implements request_write properly:
+      Score: 0.5
+  C. Queue:
+    1. Implements queue_create appropriately:
+      Score: 0.5
+    2. Implements queue_delete appropriately:
+      Score: 0.5
+    3. Implements queue_push appropriately:
+      Score: 2.0
+    4. Implements queue_pop appropriately:
+      Score: 2.0
+  D. Client:
+    1. Performs SUBSCRIBE properly:
+      Score: 0.5
+    2. Performs UNSUBSCRIBE properly:
+      Score: 0.5
+    3. Performs PUBLISH properly:
+      Score: 0.5
+    4. Performs RETRIEVE properly:
+      Score: 0.5
+    5. Successfully shutdowns properly:
+      Score: 1.5
+    6. Utilizes multiple threads for sending and receiving properly:
+      Score: 1.5
+    7. Utilizes concurrent data structures properly:
+      Score: 1.0
+    8. Free of concurrency bugs (race conditions, deadlocks, etc.):
+      Score: 1.0
+  E. Chat Application:
+    1. Supports multiple users from different machines:
+      Score: 1.0
+    2. Utilizes multiple threads properly:
+      Score: 1.0
+    3. Utilizes client library for communication properly:
+      Score: 1.0
+    4. Free of concurrency bugs (race conditions, deadlocks, etc.):
+      Score: 1.0
+    5. Terminates gracefully:
+      Score: 0.5
+
+Reflection:
+  A. Group Video Demonstration:
+    1. Exhibits reasonable audio and video quality:
+      Score: 0.5
+    2. Demonstrates passing automated tests:
+      Score: 1.0
+    3. Demonstrates working with manual input:
+      Score: 1.0
+    4. Discusses errata, quirks, or unresolved issues:
+      Score: 0.75
+    5. Discusses what the group learned from the project:
+      Score: 0.75
+
+Total: 21.75 + 4.0 = 25.75
+
