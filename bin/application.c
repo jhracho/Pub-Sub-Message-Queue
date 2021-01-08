@@ -4,89 +4,102 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "mq/client.h"
 #include "mq/queue.h"
 #include "mq/thread.h"
 #include "mq/request.h"
 #include "mq/socket.h"
+#include "mq/string.h"
 
 // Globals
+const char *TOPIC = "PBAZ";
 char *PROGRAM_NAME = NULL;
+FILE *fs;
+Thread incoming;
+Thread outgoing;
 
-// Infinite loop while the input is not /quit
-// fgets to grab input, streq to check command
-// fputs to display the output back to the screen
 void usage(int status){
-	fprintf(stderr, "Usage: %s {Host} {Port}\n", PROGRAM_NAME);
+	fprintf(stderr, "Usage: %s {Host} {Port 9000-9999}\n", PROGRAM_NAME);
 	exit(status);
 }
 
-MessageQueue *startup(char *name, char *host, char *port){
-	printf("DEBUG: Name: %s Host: %s Port: %s\n", name, host, port);
+void *outgoingFunc(void *arg){
+	MessageQueue *mq = (MessageQueue *)arg;
+	char message[BUFSIZ];
+	printf("%s: ", mq->name);
+	fgets(message, BUFSIZ, stdin);
+	char taggedMsg[BUFSIZ];
+	sprintf(taggedMsg, "%s %s\n", mq->name, message);    // Message: jhracho Hello
 	
-	MessageQueue *mq = mq_create(name, host, port);
-	if (mq)
-		return mq;
-	else{
-		fprintf(stderr, "FATAL ERROR: MessageQueue %s creation failed.", name);
-		exit(1);
+	while(!streq(message, "/quit\n")){
+		mq_publish(mq, TOPIC, taggedMsg);
+		
+		printf("%s: ", mq->name);
+		fgets(message, BUFSIZ, stdin);
+		sprintf(taggedMsg, "%s %s", mq->name, message);
 	}
+	
+	mq_stop(mq);
+	return NULL;
 }
 
-void menu(){
-	printf("1: Subscribe to a topic\n");
-	printf("2: Unsubscribe from a topic\n");
-	printf("3: Go to topic\n");
-	printf("4: Exit program\n\n");
-	printf("Select an option: ");
+void *incomingFunc(void *arg){
+	MessageQueue *mq = (MessageQueue *)arg;
+	char sender[BUFSIZ];
+	char message[BUFSIZ];
+
+	while (!mq_shutdown(mq)){
+		char *taggedMsg = mq_retrieve(mq);
+		fflush(stdout);
+		if (taggedMsg){
+			sscanf(taggedMsg, "%s %[^t\n]", sender, message);
+			if (!streq(sender, mq->name)){
+				printf("%s: %s\n", sender, message);
+			}
+			free(taggedMsg);
+		}
+	}
+	return NULL;
 }
 
-void message_board(MessageQueue *mq){
-
-
+void messageBoard(MessageQueue *mq){
+	printf("*****Welcome to the Peter Bui Autonomous Zone (PBAZ)*****\n");
+	printf("************Type /quit to leave at any time.*************\n");
+	mq_subscribe(mq, TOPIC);
+	mq_start(mq);
+	thread_create(&incoming, NULL, incomingFunc, mq);
+	thread_create(&outgoing, NULL, outgoingFunc, mq);
+	thread_join(incoming, NULL);
+	thread_join(outgoing, NULL);
 }
+
 
 int main(int argc, char *argv[]){
 	PROGRAM_NAME = argv[0];
-	if (argc == 1)
+	if (argc < 3)
 		usage(1);
 	
 	char *host = argv[1];
-	char *port = argv[2];
-	char name[BUFSIZ];
-	char topic[BUFSIZ];
-	printf("Enter your netid: ");
-	fgets(name, BUFSIZ, stdin);
-	
-	printf("DEBUG: Enterring startup\n");
-	MessageQueue *mq = startup(name, host, port);
-	printf("DEBUG: Returned from startup\n");
-	char input[BUFSIZ];
-	int choice;
-	menu();
-	while(fgets(input, BUFSIZ, stdin)){
-		choice = atoi(input);
-		switch (choice){
-			case 1:
-				printf("Enter name of topic you would like to subscribe to: ");
-				fgets(topic, BUFSIZ, stdin);
-				mq_subscribe(mq,topic);
-				continue;
-			case 2:
-				printf("Enter name of topic you would like to unsubscribe from: ");
-				fgets(topic, BUFSIZ, stdin);
-				mq_unsubscribe(mq,topic);
-				continue;
-			case 3:
-				message_board(mq);
-				continue;
-			case 4:
-				printf("Quitting...");
-				break;	
-			default:
-				printf("Not a valid option. Please try again\n");
-		}
+	char port[BUFSIZ];
+	strcpy(port, argv[2]);
+
+	int finalPort = atoi(port);
+	while (finalPort < 9000 || finalPort > 9999){
+		printf("Enter a port between 9000-9999: ");
+		fgets(port, BUFSIZ, stdin);
+		finalPort = atoi(port);
 	}
+	
+	char *name = getenv("USER");
+	MessageQueue *mq = mq_create(name, host, port);
+	
+	if (!mq){
+		fprintf(stderr, "FATAL ERROR: MessageQueue %s creation failed", name);
+		exit(1);
+	}
+	messageBoard(mq);
+
 	return 0;
 }
